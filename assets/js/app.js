@@ -1,7 +1,7 @@
 /**
  * Sleep Guard - Consolidated Application Controller (app.js)
  * รวมโค้ดควบคุม UI กราฟ (Dashboard, History) และการเชื่อมต่อข้อมูล:
- * 1. Real-time ECG (AD8232) & SpO2 Pleth Waveforms (Chart.js)
+ * 1. Real-time ECG waveform from the ESP-01 Wi-Fi bridge (Chart.js)
  * 2. Dynamic OSA Sleep Risk Calculation & Multi-level Clinical Alarms
  * 3. Tab Switching System (Dashboard <-> History) with URL Hash Support
  * 4. Patient History Table, Filtering, Search & Shimmer Loader
@@ -378,6 +378,35 @@ function pushRealWaveformSample(rawEcg, rawSpo2) {
 
 }
 
+const telemetryApiUrl = window.location.protocol === 'file:'
+  ? 'http://localhost:8080/api/vitals'
+  : '/api/vitals';
+
+let telemetryPoller = null;
+
+function startTelemetryPolling() {
+  if (telemetryPoller) return;
+
+  const poll = async () => {
+    try {
+      const response = await fetch(telemetryApiUrl, { cache: 'no-store' });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+      const telemetry = await response.json();
+      telemetry.connected = true;
+      if (streamState !== 'LIVE') setStreamState('LIVE');
+      pushRealWaveformSample(telemetry.ecg, null, telemetry);
+      updateVitalsDisplay(telemetry);
+    } catch (error) {
+      if (streamState !== 'SIGNAL_LOSS') setStreamState('SIGNAL_LOSS');
+      console.warn('Telemetry API unavailable:', error.message);
+    }
+  };
+
+  poll();
+  telemetryPoller = setInterval(poll, 250);
+}
+
 // --------------------------------------------------------------------------
 // 3. Numerical Vitals & Clinical Risk Engine
 // --------------------------------------------------------------------------
@@ -419,6 +448,19 @@ function updateVitalsDisplay(telemetry) {
   const risk = telemetry.sleepRisk !== null && telemetry.sleepRisk !== undefined 
     ? Math.round(telemetry.sleepRisk) 
     : calculateRiskScore(hr, spo2, resp);
+
+  const ecgValue = telemetry.ecg !== null && telemetry.ecg !== undefined ? telemetry.ecg : null;
+  const ecgValueEl = document.getElementById('valEcg');
+  const ecgBadge = document.getElementById('badgeEcg');
+  const packetInfo = document.getElementById('packetInfo');
+  const barEcg = document.getElementById('barEcg');
+  if (ecgValueEl) ecgValueEl.textContent = ecgValue !== null ? ecgValue : '--';
+  if (packetInfo) packetInfo.textContent = `Packet #${telemetry.packetCount ?? '--'}`;
+  if (barEcg) barEcg.style.width = ecgValue === null ? '0%' : '100%';
+  if (ecgBadge) {
+    ecgBadge.textContent = telemetry.leadOff ? 'LEAD OFF (Gagal)' : ecgValue === null ? 'รอสัญญาณ' : 'รับข้อมูลแล้ว';
+    ecgBadge.className = `status-badge ${telemetry.leadOff ? 'status-badge-warning' : 'status-badge-normal'}`;
+  }
 
   // Update Numbers
   const valHREl = document.getElementById('valHR');
@@ -706,7 +748,7 @@ function switchTab(tabName) {
     if (signalBanner) signalBanner.style.display = '';
     if (topbarActions) topbarActions.style.display = '';
     if (pageMainTitle) pageMainTitle.textContent = 'แดชบอร์ดเฝ้าระวังสัญญาณชีพ (Real-time)';
-    if (pageSubTitle) pageSubTitle.textContent = 'ติดตามคลื่นไฟฟ้าหัวใจ (AD8232 ECG Lead II) และระดับออกซิเจนในเลือด (SpO2)';
+    if (pageSubTitle) pageSubTitle.textContent = 'แสดงค่าคลื่นไฟฟ้าหัวใจที่ได้รับจาก ESP-01 Wi-Fi';
     window.location.hash = 'dashboard';
     // Re-size charts cleanly
     if (ecgChart) ecgChart.resize();
@@ -1045,6 +1087,7 @@ document.addEventListener('DOMContentLoaded', () => {
   } else {
     setStreamState('EMPTY');
   }
+  startTelemetryPolling();
 
   // Handle URL Hash for View Switching (#dashboard or #history)
   const initialHash = window.location.hash.replace('#', '');

@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <!--
   ============================================================================
-  SLEEP GUARD - REAL-TIME CLINICAL VITALS DASHBOARD (index.html)
-  แดชบอร์ดเฝ้าระวังสัญญาณชีพสด AD8232 ECG Lead II, SpO2 Pleth & 60GHz mmWave
+  SLEEP GUARD - REAL-TIME ECG DASHBOARD (index.html)
+  แดชบอร์ดแสดงค่าที่ได้รับจาก ESP-01 Wi-Fi ผ่าน PC bridge
   ============================================================================
 -->
 <html lang="th">
@@ -79,7 +79,7 @@
             </div>
             <div class="nav-label-wrap">
               <span>1. ติดตามสัญญาณชีพสด</span>
-              <small>Real-time ECG & SpO2</small>
+              <small>Real-time ECG</small>
             </div>
             <span class="nav-badge-live"><span class="pulse-dot-red-xs"></span> LIVE</span>
           </a>
@@ -146,7 +146,7 @@
           </button>
           <div class="header-titles">
             <h1 id="pageMainTitle">แดชบอร์ดเฝ้าระวังสัญญาณชีพ (Real-time)</h1>
-            <p id="pageSubTitle">ติดตามคลื่นไฟฟ้าหัวใจ (AD8232 ECG Lead II) และระดับออกซิเจนในเลือด (SpO2)</p>
+            <p id="pageSubTitle">แสดงค่าคลื่นไฟฟ้าหัวใจที่ได้รับจาก ESP-01 Wi-Fi</p>
           </div>
         </div>
 
@@ -180,32 +180,26 @@
       =================================================================== -->
       <section id="viewDashboard">
 
-        <!-- แถวที่ 1: การ์ดสัญญาณชีพหลัก 4 ตัว (Vitals Metrics Row) -->
+        <!-- ค่าที่ได้รับจาก ESP-01 -->
         <div class="vitals-grid">
-
-          <!-- 1. Heart Rate (HR) -->
           <div class="vital-card theme-red">
             <div class="vital-card-header">
-              <div class="metric-badge-label">
-                <i class="fa-solid fa-heart-pulse"></i> อัตราการเต้นหัวใจ
-              </div>
-              <span class="status-badge status-badge-normal" id="badgeHR">รอสัญญาณ</span>
+              <div class="metric-badge-label"><i class="fa-solid fa-wave-square"></i> ECG value</div>
+              <span class="status-badge status-badge-normal" id="badgeEcg">รอสัญญาณ</span>
             </div>
             <div class="vital-card-body">
-              <span class="metric-large-val" id="valHR">--</span>
-              <span class="metric-unit-tag">BPM</span>
+              <span class="metric-large-val" id="valEcg">--</span>
             </div>
             <div class="vital-card-footer">
               <div class="progress-track">
-                <div class="progress-fill fill-red" id="barHR" style="width: 0%"></div>
+                <div class="progress-fill fill-red" id="barEcg" style="width: 0%"></div>
               </div>
-              <span class="metric-standard-hint">เกณฑ์ปกติ: 50 - 100 BPM</span>
+              <span class="metric-standard-hint" id="packetInfo">Packet #--</span>
             </div>
           </div>
-
         </div>
 
-        <!-- แถวที่ 2: หน้าจอแสดงคลื่น ECG และ SpO2 Pleth (Waveforms Monitor) -->
+        <!-- กราฟ ECG -->
         <div class="waveform-monitor-grid">
 
           <!-- กล่องคลื่นไฟฟ้าหัวใจ (AD8232 Lead II) -->
@@ -227,30 +221,6 @@
             </div>
           </div>
 
-        </div>
-
-        <!-- แถวที่ 3: แถบสถานะสภาพแวดล้อม (Environmental Strip) -->
-        <div class="env-compact-bar">
-          <div class="env-chip-box">
-            <i class="fa-solid fa-temperature-half text-orange"></i>
-            <span class="env-chip-label">อุณหภูมิร่างกาย:</span>
-            <strong class="env-chip-val" id="valBodyTemp">-- °C</strong>
-            <span class="status-badge status-badge-normal" id="badgeBodyTemp">ปกติ</span>
-          </div>
-
-          <div class="env-chip-box">
-            <i class="fa-solid fa-house-chimney-window text-green"></i>
-            <span class="env-chip-label">อุณหภูมิห้อง:</span>
-            <strong class="env-chip-val" id="valRoomTemp">-- °C</strong>
-            <span class="status-badge status-badge-normal" id="badgeRoomTemp">ปกติ</span>
-          </div>
-
-          <div class="env-chip-box">
-            <i class="fa-solid fa-droplet text-teal"></i>
-            <span class="env-chip-label">ความชื้นห้อง:</span>
-            <strong class="env-chip-val" id="valHumidity">-- % RH</strong>
-            <span class="status-badge status-badge-normal" id="badgeHumidity">ปกติ</span>
-          </div>
         </div>
 
       </section>
@@ -342,7 +312,6 @@
                 <th><i class="fa-solid fa-bed-pulse" style="margin-right:6px;opacity:.6"></i>ห้อง / เตียง</th>
                 <th><i class="fa-regular fa-clock" style="margin-right:6px;opacity:.6"></i>เวลา</th>
                 <th><i class="fa-solid fa-heart-pulse" style="margin-right:6px;opacity:.6;color:#ef4444"></i>HR</th>
-                <th><i class="fa-solid fa-lungs" style="margin-right:6px;opacity:.6;color:#0284c7"></i>SpO2</th>
                 <th><i class="fa-solid fa-shield-virus" style="margin-right:6px;opacity:.6;color:#8b5cf6"></i>Risk</th>
                 <th>สถานะ</th>
                 <th>ECG</th>
@@ -374,7 +343,6 @@
             หรือภาวะหยุดหายใจขณะนอนหลับ (Sleep Apnea)
           </p>
           <div class="history-empty-hints">
-            <div class="hint-chip"><i class="fa-solid fa-circle-dot" style="color:#ef4444"></i> SpO2 &lt; 90%</div>
             <div class="hint-chip"><i class="fa-solid fa-circle-dot" style="color:#f59e0b"></i> HR &gt; 120 BPM</div>
             <div class="hint-chip"><i class="fa-solid fa-circle-dot" style="color:#8b5cf6"></i> Risk Score ≥ 65</div>
           </div>
@@ -412,10 +380,6 @@
             <span class="chip-value text-red" id="modalHR">-- BPM</span>
           </div>
           <div class="modal-vital-chip">
-            <span class="chip-label">SpO2</span>
-            <span class="chip-value text-blue" id="modalSpO2">--%</span>
-          </div>
-          <div class="modal-vital-chip">
             <span class="chip-label">Risk Score</span>
             <span class="chip-value text-purple" id="modalRiskScore">--/100</span>
           </div>
@@ -437,7 +401,7 @@
         <div>
           <h2 class="modal-title"><i class="fa-solid fa-microchip text-teal"></i> ตรวจเช็กฮาร์ดแวร์ &
             การเชื่อมต่อเซนเซอร์</h2>
-          <p class="modal-subtitle">สถานะการทำงานของบอร์ด micro:bit v2, สายสัญญาณ ECG Lead II และโมดูล SpO2</p>
+          <p class="modal-subtitle">สถานะการทำงานของบอร์ด micro:bit v2 และสายสัญญาณ ECG Lead II</p>
         </div>
         <button class="modal-close" onclick="closeHardwareModal()" aria-label="ปิด">&times;</button>
       </div>
@@ -482,27 +446,6 @@
             <div class="hw-spec-row">
               <span>ช่วงความถี่กรองสัญญาณ:</span>
               <span class="hw-spec-val">0.5 Hz - 40 Hz (Medical Filter)</span>
-            </div>
-          </div>
-
-          <!-- Card 3: MAX30102 SpO2 Sensor -->
-          <div class="hw-card">
-            <div class="hw-card-header">
-              <span class="hw-card-title"><i class="fa-solid fa-lungs" style="color:#0284c7"></i> MAX30102 Pulse
-                Oximeter</span>
-              <span class="status-badge status-badge-normal" id="diagSpo2Status">I2C Standby</span>
-            </div>
-            <div class="hw-spec-row">
-              <span>บัสสื่อสาร I2C:</span>
-              <span class="hw-spec-val">Address 0x57 (Pin 19 SCL, Pin 20 SDA)</span>
-            </div>
-            <div class="hw-spec-row">
-              <span>หลอด LED Optical:</span>
-              <span class="hw-spec-val">Red (660nm) & IR (880nm)</span>
-            </div>
-            <div class="hw-spec-row">
-              <span>อัตราการวัด:</span>
-              <span class="hw-spec-val">100 Samples/sec (Averaged)</span>
             </div>
           </div>
 
@@ -553,7 +496,6 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <!-- Modular Scripts -->
-  <script src="assets/js/serial.js"></script>
   <script src="assets/js/app.js"></script>
 </body>
 
