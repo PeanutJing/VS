@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<!--
+  ============================================================================
+  SLEEP GUARD - SYSTEM SETTINGS & CLINICAL THRESHOLDS (settings.html)
+  หน้าที่ของไฟล์:
+  1. จัดการข้อมูลผู้ป่วย (EHR Profile, HN, เตียง, หอผู้ป่วย)
+  2. กำหนดเกณฑ์สัญญาณชีพวิกฤต (HR Min/Max, SpO2 Min, Apnea Delay)
+  3. ตั้งค่าระบบเสียงแจ้งเตือนทางการแพทย์ (Medical Buzzer) และ LINE Notify
+  ============================================================================
+-->
+<html lang="th">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sleep Guard - การตั้งค่าระบบและการเตือนภัย (System Settings)</title>
+
+  <!-- FontAwesome Icons 6 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- Google Fonts: Prompt, Kanit, Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Kanit:wght@300;400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap"
+    rel="stylesheet">
+
+  <!-- CSS Modules -->
+  <link rel="stylesheet" href="assets/css/main.css">
+  <link rel="stylesheet" href="assets/css/settings.css">
+</head>
+
+<body>
+
+  <div class="app-container">
+
+    <!-- ==========================================
+         Sidebar Navigation Component
+    =========================================== -->
+    <aside class="sidebar">
+      <div class="brand-wrapper">
+        <a href="index.html" class="brand">
+          <div class="brand-icon">
+            <i class="fa-solid fa-heart-pulse"></i>
+          </div>
+          <div class="brand-text">
+            <div class="brand-title-row">
+              <h1>Sleep Guard</h1>
+              <span class="brand-badge-pro">ICU PRO</span>
+            </div>
+            <span class="brand-subtitle">ระบบเฝ้าระวังสัญญาณชีพ IoT</span>
+          </div>
+        </a>
+      </div>
+
+      <div class="menu-section">
+        <div class="nav-section-label"><i class="fa-solid fa-list-check"></i> ขั้นตอนการใช้งาน</div>
+        <nav class="nav-links">
+          <!-- 1. ติดตามสัญญาณชีพสด -->
+          <a href="index.html#dashboard" class="nav-item">
+            <div class="nav-icon-box icon-red">
+              <i class="fa-solid fa-heart-pulse"></i>
+            </div>
+            <div class="nav-label-wrap">
+              <span>1. ติดตามสัญญาณชีพสด</span>
+              <small>Real-time ECG & SpO2</small>
+            </div>
+            <span class="nav-badge-live"><span class="pulse-dot-red-xs"></span> LIVE</span>
+          </a>
+
+          <!-- 2. ประวัติผู้ป่วย -->
+          <a href="index.html#history" class="nav-item">
+            <div class="nav-icon-box icon-blue">
+              <i class="fa-solid fa-clock-rotate-left"></i>
+            </div>
+            <div class="nav-label-wrap">
+              <span>2. ประวัติผู้ป่วย & บันทึก</span>
+              <small>Incident History Log</small>
+            </div>
+          </a>
+
+          <!-- 3. เมนูตั้งค่าระบบพร้อมเมนูย่อย Sub-menu -->
+          <div class="nav-item-container">
+            <a href="settings.html" class="nav-item active">
+              <div class="nav-icon-box icon-purple">
+                <i class="fa-solid fa-sliders"></i>
+              </div>
+              <div class="nav-label-wrap">
+                <span>3. ปรับแต่งค่าระบบ</span>
+                <small>เกณฑ์วิกฤต & เสียงเตือน</small>
+              </div>
+              <i class="fa-solid fa-chevron-down nav-arrow"></i>
+            </a>
+
+            <div class="sub-menu">
+              <button type="button" class="settings-nav-item active" data-tab="tabPatientVitals">
+                <i class="fa-solid fa-hospital-user"></i>
+                <span>ข้อมูล & สัญญาณชีพ</span>
+              </button>
+              <button type="button" class="settings-nav-item" data-tab="tabAudio">
+                <i class="fa-solid fa-volume-high"></i>
+                <span>เสียง & การแจ้งเตือน</span>
+              </button>
+            </div>
+          </div>
+        </nav>
+      </div>
+
+      <div class="sidebar-footer">
+        <div class="status-indicator">
+          <span class="status-dot"></span>
+          <div class="status-text-block">
+            <span class="status-title">สถานะระบบ</span>
+            <span class="status-text">ออนไลน์ • พร้อมทำงาน</span>
+          </div>
+        </div>
+        <div class="live-clock-card">
+          <i class="fa-regular fa-clock clock-icon"></i>
+          <span class="time-stamp" id="liveClock">00:00:00</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ==========================================
+         Main Content Area
+    =========================================== -->
+    <main class="main-content">
+
+      <!-- Topbar Header -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="mobile-menu-toggle" id="mobileMenuBtn" aria-label="Toggle Menu">
+            <i class="fa-solid fa-bars"></i>
+          </button>
+          <div class="header-titles">
+            <h1>การตั้งค่าระบบและการเตือนภัย (System Configuration)</h1>
+            <p>จัดการข้อมูลผู้ป่วย กำหนดเกณฑ์สัญญาณชีพวิกฤตเฉพาะบุคคล และระบบเสียง Buzzer ทางการแพทย์</p>
+          </div>
+        </div>
+
+        <div class="topbar-right">
+          <div class="system-status-chip">
+            <span class="chip-pulse"></span>
+            <span class="chip-label">ระบบซิงค์อัตโนมัติ</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- Settings Layout Container -->
+      <div class="settings-layout-wrapper">
+
+        <!-- ==========================================
+                 TAB 1: PATIENT PROFILE & VITALS ALERT THRESHOLDS (MERGED)
+            =========================================== -->
+        <section class="settings-panel active" id="tabPatientVitals" role="tabpanel">
+
+          <!-- Hero & Quick Patient Case Selectors -->
+          <div class="panel-hero">
+            <div class="hero-text">
+              <div class="badge-pill badge-primary-soft">
+                <i class="fa-solid fa-hospital-user"></i> Clinical Patient Profile & Vitals Safety Guard
+              </div>
+              <h2>ข้อมูลผู้ป่วยและเกณฑ์สัญญาณชีพเฉพาะบุคคล (Patient Profile & Vitals Alerts)</h2>
+              <p>ลงทะเบียนประวัติผู้ป่วย โรคประจำตัว การแพ้ยา พร้อมกำหนดเกณฑ์สัญญาณชีพฉุกเฉิน (Min/Max HR, SpO2, Apnea
+                Delay) สำหรับการเฝ้าระวังผู้ป่วยแต่ละเตียง</p>
+            </div>
+
+            <!-- Patient Quick Switcher Toolbar & Actions -->
+            <div class="presets-toolbar" id="presetsToolbar" style="display:none;">
+              <span class="presets-label"><i class="fa-solid fa-users-viewfinder"></i> สลับเลือกเคสผู้ป่วย:</span>
+              <div class="presets-btn-group" id="patientQuickPresetsGroup">
+                <!-- Dynamically rendered by settings.js from real registered patients -->
+              </div>
+              <div style="margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap;">
+                <button type="button" class="btn-guest-switch" id="btnSwitchToGuest">
+                  <i class="fa-solid fa-shield-halved text-teal"></i> โหมดไม่เก็บข้อมูล
+                </button>
+                <button type="button" class="btn-preset btn-preset-add" id="btnNewPatientTop">
+                  <i class="fa-solid fa-user-plus"></i> + เพิ่มผู้ป่วยใหม่
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ==========================================
+               No Database Onboarding Screen (Register vs Guest Mode)
+          =========================================== -->
+          <div class="no-patient-onboarding-card" id="noPatientOnboarding">
+            <div class="onboarding-badge">
+              <i class="fa-solid fa-database"></i> ไม่พบฐานข้อมูลผู้ป่วยในระบบ
+            </div>
+            <h3>เริ่มต้นใช้งานระบบมอนิเตอร์สัญญาณชีพ</h3>
+            <p>ระบบตรวจไม่พบบันทึกข้อมูลผู้ป่วยในฐานข้อมูล กรุณาเลือกสมัครลงทะเบียนข้อมูลผู้ป่วยเพื่อตั้งเกณฑ์ความปลอดภัยเฉพาะบุคคล หรือเลือกใช้งานแบบไม่เก็บข้อมูลส่วนบุคคล:</p>
+
+            <div class="onboarding-options-grid">
+              <!-- Option 1: Register New Patient -->
+              <div class="onboard-card highlight" id="btnCardRegister">
+                <div>
+                  <div class="onboard-icon-box bg-blue">
+                    <i class="fa-solid fa-user-plus"></i>
+                  </div>
+                  <h4>1. ลงทะเบียน / สมัครข้อมูลผู้ป่วย</h4>
+                  <p>บันทึกชื่อ, รหัส HN, หอผู้ป่วย/เตียง, ประวัติโรคประจำตัว, และตั้งเกณฑ์วิกฤตความปลอดภัย (HR, SpO2, Apnea Delay) เฉพาะบุคคล</p>
+                </div>
+                <button type="button" class="btn btn-primary btn-sm" id="btnStartRegister">
+                  <i class="fa-solid fa-pen-to-square"></i> สมัครข้อมูลผู้ป่วยใหม่
+                </button>
+              </div>
+
+              <!-- Option 2: Anonymous Guest Mode -->
+              <div class="onboard-card" id="btnCardGuest">
+                <div>
+                  <div class="onboard-icon-box bg-teal">
+                    <i class="fa-solid fa-shield-halved"></i>
+                  </div>
+                  <h4>2. ใช้งานแบบไม่เก็บข้อมูล</h4>
+                  <p>เริ่มมอนิเตอร์สัญญาณชีพสดทันทีโดยไม่ระบุตัวตนและไม่บันทึกข้อมูลส่วนบุคคลลงระบบ (ใช้เกณฑ์มาตรฐานทางการแพทย์อัตโนมัติ)</p>
+                </div>
+                <button type="button" class="btn btn-outline btn-sm" id="btnStartGuest">
+                  <i class="fa-solid fa-play"></i> เริ่มต้นโหมดไม่เก็บข้อมูล
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Active Patient Highlight Banner -->
+          <div class="active-patient-card-banner" id="activePatientBanner" style="display:none;">
+            <div class="active-patient-avatar-box">
+              <div class="patient-big-avatar" id="dispAvatar">ผ</div>
+              <div class="active-pulse-badge" title="กำลังมอนิเตอร์บนแดชบอร์ด">
+                <span class="pulse-dot"></span> LIVE
+              </div>
+            </div>
+
+            <div class="active-patient-main-info">
+              <div class="patient-title-row">
+                <h3 id="dispFullName">ยังไม่ได้ระบุผู้ป่วย</h3>
+                <span class="hn-tag" id="dispHnTag">HN: -</span>
+                <span class="status-badge status-badge-normal" id="dispRiskBadge">
+                  <i class="fa-solid fa-circle-check"></i> ปกติ
+                </span>
+              </div>
+              <div class="patient-sub-details">
+                <span><i class="fa-solid fa-bed"></i> <strong id="dispWardBed">-</strong></span>
+                <span><i class="fa-solid fa-user"></i> <span id="dispAgeGender">-</span></span>
+                <span><i class="fa-solid fa-user-doctor"></i> <span id="dispDoctor">-</span></span>
+                <span><i class="fa-solid fa-calendar-day"></i> รับเข้ารักษา: <span id="dispAdmitDate">-</span></span>
+              </div>
+              <div class="patient-condition-tags" id="dispConditionTags">
+                <!-- Dynamically rendered -->
+              </div>
+            </div>
+
+            <div class="active-patient-vitals-mini">
+              <div class="mini-vital-box">
+                <span class="lbl">ช่วง HR ปลอดภัย</span>
+                <span class="val text-danger" id="dispThresholdHr">50 - 100 <small>BPM</small></span>
+              </div>
+              <div class="mini-vital-box">
+                <span class="lbl">Min SpO2</span>
+                <span class="val text-primary" id="dispThresholdSpo2">≥ 95 <small>%</small></span>
+              </div>
+              <div class="mini-vital-box">
+                <span class="lbl">Apnea Delay</span>
+                <span class="val text-purple" id="dispThresholdApnea">10 <small>วินาที</small></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Native HTML5 Modal Dialog for Patient Profile & Vitals Configuration -->
+          <dialog id="patientDialog" class="patient-modal-dialog">
+            <div class="dialog-content-wrapper">
+              <!-- Dialog Header -->
+              <div class="dialog-header">
+                <div class="dialog-header-info">
+                  <div class="badge-pill badge-primary-soft">
+                    <i class="fa-solid fa-notes-medical"></i> Patient EHR & Vitals Guard
+                  </div>
+                  <h3 id="formModeTitle"><i class="fa-solid fa-user-pen"></i> ลงทะเบียน / แก้ไขข้อมูลประวัติผู้ป่วย</h3>
+                  <p class="dialog-subtitle">กรอกข้อมูลประวัติการรักษา โรคประจำตัว และตั้งเกณฑ์สัญญาณชีพวิกฤตเฉพาะบุคคล</p>
+                </div>
+                <button type="button" class="btn-dialog-close" id="btnCloseDialog" title="ปิดหน้าต่าง">&times;</button>
+              </div>
+
+              <!-- Dialog Scrollable Body -->
+              <div class="dialog-scroll-body">
+                <!-- Section 1: Demographics & Admission -->
+                <div class="patient-section-card">
+                  <div class="patient-section-title">
+                    <i class="fa-solid fa-address-card text-primary"></i>
+                    <span>1. ข้อมูลทั่วไปและการรับตัวผู้ป่วย (Demographics & Admission)</span>
+                  </div>
+
+                  <div class="form-grid-3">
+                    <div class="form-group">
+                      <label class="form-label" for="inputPatientHn">
+                        <span>รหัสประจำตัวผู้ป่วย (HN) *</span>
+                        <span class="text-hint">สร้างให้อัตโนมัติ</span>
+                      </label>
+                      <div class="input-with-action">
+                        <i class="fa-solid fa-hashtag input-icon-left"></i>
+                        <input type="text" id="inputPatientHn" class="form-control" placeholder="เช่น HN-90412" required>
+                        <button type="button" class="btn-input-addon" id="btnGenerateHn" title="สุ่มรหัส HN ใหม่">
+                          <i class="fa-solid fa-arrows-rotate"></i> สุ่ม HN
+                        </button>
+                      </div>
+                    </div>
+
+                    <div class="form-group">
+                      <label class="form-label" for="inputPatientName">
+                        <span>ชื่อ - นามสกุล ผู้ป่วย *</span>
+                      </label>
+                      <div class="input-with-icon">
+                        <i class="fa-solid fa-user input-icon"></i>
+                        <input type="text" id="inputPatientName" class="form-control" placeholder="เช่น เคสเฝ้าระวัง ICU เตียง 4A" required>
+                      </div>
+                    </div>
+
+                    <div class="form-grid-2-mini">
+                      <div class="form-group">
+                        <label class="form-label" for="inputPatientAge">อายุ (ปี)</label>
+                        <input type="number" id="inputPatientAge" class="form-control" placeholder="48" min="1" max="130">
+                      </div>
+                      <div class="form-group">
+                        <label class="form-label" for="selectPatientGender">เพศ</label>
+                        <select id="selectPatientGender" class="form-select">
+                          <option value="ชาย">ชาย</option>
+                          <option value="หญิง">หญิง</option>
+                          <option value="อื่นๆ">อื่นๆ</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="form-grid-3">
+                    <div class="form-group">
+                      <label class="form-label" for="inputPatientWard">หอผู้ป่วย / แผนก (Ward) *</label>
+                      <div class="input-with-icon">
+                        <i class="fa-solid fa-hospital input-icon"></i>
+                        <input type="text" id="inputPatientWard" class="form-control" placeholder="เช่น ICU Ward 4 (Intermediate Care)">
+                      </div>
+                    </div>
+
+                    <div class="form-group">
+                      <label class="form-label" for="inputPatientBed">หมายเลขเตียง / ห้องพัก *</label>
+                      <div class="input-with-icon">
+                        <i class="fa-solid fa-bed input-icon"></i>
+                        <input type="text" id="inputPatientBed" class="form-control" placeholder="เช่น ICU-04 / เตียง A (Bed #04)">
+                      </div>
+                    </div>
+
+                    <div class="form-group">
+                      <label class="form-label" for="inputPatientAdmitDate">วันที่และเวลารับเข้ารักษา</label>
+                      <input type="datetime-local" id="inputPatientAdmitDate" class="form-control">
+                    </div>
+                  </div>
+
+                  <div class="form-grid-3">
+                    <div class="form-group">
+                      <label class="form-label" for="inputPatientPhone">เบอร์โทรศัพท์ฉุกเฉิน / ญาติ</label>
+                      <div class="input-with-icon">
+                        <i class="fa-solid fa-phone input-icon"></i>
+                        <input type="tel" id="inputPatientPhone" class="form-control" placeholder="เช่น 089-123-4567 (คุณวิมล - ภรรยา)">
+                      </div>
+                    </div>
+
+                    <div class="form-group">
+                      <label class="form-label" for="inputPatientDoctor">แพทย์เจ้าของไข้ (Attending Physician)</label>
+                      <div class="input-with-icon">
+                        <i class="fa-solid fa-user-doctor input-icon"></i>
+                        <input type="text" id="inputPatientDoctor" class="form-control" placeholder="เช่น นพ. เกียรติศักดิ์ อานันท์">
+                      </div>
+                    </div>
+
+                    <div class="form-group">
+                      <label class="form-label" for="inputPatientNurse">พยาบาลผู้รับผิดชอบ (Primary Nurse)</label>
+                      <div class="input-with-icon">
+                        <i class="fa-solid fa-user-nurse input-icon"></i>
+                        <input type="text" id="inputPatientNurse" class="form-control" placeholder="เช่น พว. วิภาดา สุขเจริญ (RN)">
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Section 2: Clinical History & Allergies -->
+                <div class="patient-section-card">
+                  <div class="patient-section-title">
+                    <i class="fa-solid fa-heart-pulse text-danger"></i>
+                    <span>2. ประวัติทางการแพทย์ โรคประจำตัว และประวัติการแพ้ยา (Clinical History & Allergies)</span>
+                  </div>
+
+                  <!-- Selectable Condition Tags -->
+                  <div class="form-group">
+                    <label class="form-label">
+                      <span>โรคประจำตัวและภาวะเสี่ยงสำคัญ (เลือกได้หลายข้อ)</span>
+                      <span class="text-hint">คลิกที่ชิปเพื่อเลือก / ยกเลิก</span>
+                    </label>
+                    <div class="interactive-tag-chips" id="diseaseTagsContainer">
+                      <button type="button" class="tag-chip active" data-condition="OSA">
+                        <i class="fa-solid fa-lungs"></i> ภาวะหยุดหายใจขณะหลับ (OSA)
+                      </button>
+                      <button type="button" class="tag-chip active" data-condition="Arrhythmia">
+                        <i class="fa-solid fa-heart-crack"></i> หัวใจเต้นผิดจังหวะ (Arrhythmia)
+                      </button>
+                      <button type="button" class="tag-chip" data-condition="Hypertension">
+                        <i class="fa-solid fa-gauge-high"></i> ความดันโลหิตสูง (HT)
+                      </button>
+                      <button type="button" class="tag-chip" data-condition="CAD">
+                        <i class="fa-solid fa-shield-heart"></i> โรคหลอดเลือดหัวใจ (CAD)
+                      </button>
+                      <button type="button" class="tag-chip" data-condition="Diabetes">
+                        <i class="fa-solid fa-droplet"></i> เบาหวาน (DM)
+                      </button>
+                      <button type="button" class="tag-chip" data-condition="Asthma">
+                        <i class="fa-solid fa-wind"></i> โรคหอบหืด / COPD
+                      </button>
+                      <button type="button" class="tag-chip" data-condition="PostOp">
+                        <i class="fa-solid fa-syringe"></i> พักฟื้นหลังการผ่าตัด
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="form-grid-2">
+                    <div class="form-group">
+                      <label class="form-label" for="inputOtherConditions">โรคประจำตัวหรือประวัติการผ่าตัดอื่นๆ</label>
+                      <input type="text" id="inputOtherConditions" class="form-control" placeholder="เช่น เคยผ่าตัดบายพาสหัวใจ (CABG) ปี 2024, ไขมันในเลือดสูง">
+                    </div>
+
+                    <div class="form-group">
+                      <label class="form-label text-danger" for="inputPatientAllergies">
+                        <span><i class="fa-solid fa-triangle-exclamation"></i> ประวัติการแพ้ยา & สารอาหาร (Allergies)</span>
+                        <span class="badge-pill badge-danger-soft">สำคัญมาก</span>
+                      </label>
+                      <div class="input-with-icon allergy-input-wrap">
+                        <i class="fa-solid fa-ban input-icon text-danger"></i>
+                        <input type="text" id="inputPatientAllergies" class="form-control alert-border-danger" placeholder="เช่น แพ้ยา Penicillin (ผื่นคัน แน่นหน้าอก), แพ้อาหารทะเล">
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Risk Priority Level Selector -->
+                  <div class="form-group">
+                    <label class="form-label">
+                      <span>ระดับการเฝ้าระวังผู้ป่วย (Patient Care & Risk Priority) *</span>
+                    </label>
+                    <div class="risk-selector-group">
+                      <label class="risk-radio-card high-risk">
+                        <input type="radio" name="patientRiskLevel" value="high" checked>
+                        <div class="risk-radio-content">
+                          <div class="risk-radio-icon"><i class="fa-solid fa-skull-crossbones"></i></div>
+                          <div class="risk-radio-text">
+                            <strong>เฝ้าระวังพิเศษ ICU (High Risk)</strong>
+                            <span>เสี่ยงหยุดหายใจรุนแรง ตรวจสอบสัญญาณชีพแบบ Real-time ตลอด 24 ชม.</span>
+                          </div>
+                        </div>
+                      </label>
+
+                      <label class="risk-radio-card med-risk">
+                        <input type="radio" name="patientRiskLevel" value="med">
+                        <div class="risk-radio-content">
+                          <div class="risk-radio-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                          <div class="risk-radio-text">
+                            <strong>เฝ้าระวังกึ่งวิกฤต (Medium Risk)</strong>
+                            <span>ผู้ป่วยมีโรคประจำตัว เฝ้าระวังการดรอปของ SpO2 และช่วงนอนหลับ</span>
+                          </div>
+                        </div>
+                      </label>
+
+                      <label class="risk-radio-card low-risk">
+                        <input type="radio" name="patientRiskLevel" value="low">
+                        <div class="risk-radio-content">
+                          <div class="risk-radio-icon"><i class="fa-solid fa-shield-halved"></i></div>
+                          <div class="risk-radio-text">
+                            <strong>พักฟื้นทั่วไป (Low Risk / Standard)</strong>
+                            <span>สัญญาณชีพคงที่ ติดตามความต่อเนื่องของคุณภาพการนอนหลับ</span>
+                          </div>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Section 3: Vitals Alert Thresholds (รวมเกณฑ์สัญญาณชีพ) -->
+                <div class="patient-section-card">
+                  <div class="patient-section-title">
+                    <i class="fa-solid fa-heart-pulse text-danger"></i>
+                    <span>3. เกณฑ์การแจ้งเตือนสัญญาณชีพวิกฤตเฉพาะบุคคล (Patient-Specific Vitals Alert Thresholds)</span>
+                  </div>
+
+                  <!-- Clinical Presets Toolbar for this patient -->
+                  <div class="presets-toolbar mb-3">
+                    <span class="presets-label"><i class="fa-solid fa-wand-magic-sparkles"></i> โหมดพรีเซ็ตมาตรฐาน:</span>
+                    <div class="presets-btn-group">
+                      <button type="button" class="btn-preset active" data-preset="adult">
+                        <i class="fa-solid fa-user"></i> ผู้ใหญ่ทั่วไป
+                      </button>
+                      <button type="button" class="btn-preset" data-preset="elderly">
+                        <i class="fa-solid fa-person-cane"></i> ผู้สูงอายุ
+                      </button>
+                      <button type="button" class="btn-preset" data-preset="icu">
+                        <i class="fa-solid fa-bed-pulse"></i> เฝ้าระวัง ICU
+                      </button>
+                      <button type="button" class="btn-preset" data-preset="athlete">
+                        <i class="fa-solid fa-person-running"></i> นักกีฬา
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Interactive Live HR Range Visualizer -->
+                  <div class="interactive-visualizer-card">
+                    <div class="visualizer-header">
+                      <div class="visualizer-title">
+                        <i class="fa-solid fa-chart-simple icon-accent"></i>
+                        <span>การจำลองช่วงความปลอดภัยของอัตราการเต้นของหัวใจ (Heart Rate Safety Spectrum)</span>
+                      </div>
+                      <span class="visualizer-current-badge" id="hrRangeDisplay">ช่วงปลอดภัย: 50 - 100 BPM</span>
+                    </div>
+
+                    <div class="range-spectrum-container">
+                      <div class="spectrum-bar">
+                        <div class="spectrum-zone zone-brady" id="zoneBrady" style="width: 33%;">
+                          <span class="zone-label"><i class="fa-solid fa-triangle-exclamation"></i> Bradycardia (<span id="gaugeBradyVal">50</span>)</span>
+                        </div>
+                        <div class="spectrum-zone zone-normal" id="zoneNormal" style="width: 34%;">
+                          <span class="zone-label"><i class="fa-solid fa-check-circle"></i> ปลอดภัย (Normal)</span>
+                        </div>
+                        <div class="spectrum-zone zone-tachy" id="zoneTachy" style="width: 33%;">
+                          <span class="zone-label"><i class="fa-solid fa-fire-flame-curved"></i> Tachycardia (> <span id="gaugeTachyVal">100</span>)</span>
+                        </div>
+                      </div>
+                      <div class="spectrum-ticks">
+                        <span>30 BPM</span>
+                        <span>60 BPM</span>
+                        <span>90 BPM</span>
+                        <span>120 BPM</span>
+                        <span>150+ BPM</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Threshold Configuration 4 Cards Grid -->
+                  <div class="settings-grid">
+
+                    <!-- 1. Heart Rate Min -->
+                    <div class="setting-card">
+                      <div class="setting-card-header">
+                        <div class="card-icon-avatar bg-amber-soft">
+                          <i class="fa-solid fa-heart-crack text-amber"></i>
+                        </div>
+                        <div>
+                          <h4>อัตราการเต้นหัวใจต่ำสุด (Min HR)</h4>
+                          <p>เตือนเมื่อชีพจรต่ำกว่าค่านี้ (Bradycardia)</p>
+                        </div>
+                      </div>
+
+                      <div class="stepper-input-wrapper">
+                        <button type="button" class="btn-stepper" data-step-target="inputHrMin" data-step="-5">
+                          <i class="fa-solid fa-minus"></i>
+                        </button>
+                        <div class="input-with-unit">
+                          <input type="number" id="inputHrMin" class="form-control-stepper" value="50" min="30" max="80" step="1" required>
+                          <span class="input-unit">BPM</span>
+                        </div>
+                        <button type="button" class="btn-stepper" data-step-target="inputHrMin" data-step="5">
+                          <i class="fa-solid fa-plus"></i>
+                        </button>
+                      </div>
+
+                      <div class="card-helper-text">
+                        <i class="fa-solid fa-circle-info"></i>
+                        <span>เกณฑ์แนะนำ: <strong>50 - 60 BPM</strong></span>
+                      </div>
+                    </div>
+
+                    <!-- 2. Heart Rate Max -->
+                    <div class="setting-card">
+                      <div class="setting-card-header">
+                        <div class="card-icon-avatar bg-red-soft">
+                          <i class="fa-solid fa-heart-pulse text-red"></i>
+                        </div>
+                        <div>
+                          <h4>อัตราการเต้นหัวใจสูงสุด (Max HR)</h4>
+                          <p>เตือนเมื่อชีพจรสูงเกินค่านี้ (Tachycardia)</p>
+                        </div>
+                      </div>
+
+                      <div class="stepper-input-wrapper">
+                        <button type="button" class="btn-stepper" data-step-target="inputHrMax" data-step="-5">
+                          <i class="fa-solid fa-minus"></i>
+                        </button>
+                        <div class="input-with-unit">
+                          <input type="number" id="inputHrMax" class="form-control-stepper" value="100" min="90" max="180" step="1" required>
+                          <span class="input-unit">BPM</span>
+                        </div>
+                        <button type="button" class="btn-stepper" data-step-target="inputHrMax" data-step="5">
+                          <i class="fa-solid fa-plus"></i>
+                        </button>
+                      </div>
+
+                      <div class="card-helper-text">
+                        <i class="fa-solid fa-circle-info"></i>
+                        <span>เกณฑ์แนะนำ: <strong>100 - 120 BPM</strong></span>
+                      </div>
+                    </div>
+
+                    <!-- 3. Blood Oxygen (SpO2) -->
+                    <div class="setting-card">
+                      <div class="setting-card-header">
+                        <div class="card-icon-avatar bg-blue-soft">
+                          <i class="fa-solid fa-lungs text-blue"></i>
+                        </div>
+                        <div>
+                          <h4>ออกซิเจนในเลือดขั้นต่ำ (Min SpO2)</h4>
+                          <p>เตือนภาวะพร่องออกซิเจน (Hypoxia)</p>
+                        </div>
+                      </div>
+
+                      <div class="stepper-input-wrapper">
+                        <button type="button" class="btn-stepper" data-step-target="inputSpo2Min" data-step="-1">
+                          <i class="fa-solid fa-minus"></i>
+                        </button>
+                        <div class="input-with-unit">
+                          <input type="number" id="inputSpo2Min" class="form-control-stepper" value="95" min="75" max="99" step="1" required>
+                          <span class="input-unit">% SpO2</span>
+                        </div>
+                        <button type="button" class="btn-stepper" data-step-target="inputSpo2Min" data-step="1">
+                          <i class="fa-solid fa-plus"></i>
+                        </button>
+                      </div>
+
+                      <div class="hypoxia-scale-guide">
+                        <div class="scale-item normal"><span>≥ 95% ปกติ</span></div>
+                        <div class="scale-item warning"><span>90-94% พร่อง</span></div>
+                        <div class="scale-item critical"><span>&lt; 90% วิกฤต</span></div>
+                      </div>
+                    </div>
+
+                    <!-- 4. Apnea Radar Detection Delay -->
+                    <div class="setting-card">
+                      <div class="setting-card-header">
+                        <div class="card-icon-avatar bg-purple-soft">
+                          <i class="fa-solid fa-tower-broadcast text-purple"></i>
+                        </div>
+                        <div>
+                          <h4>หน่วงเวลาหยุดหายใจ (Apnea Delay)</h4>
+                          <p>เรดาร์ 60GHz ตรวจจับเมื่อทรวงอกไม่ขยับ</p>
+                        </div>
+                      </div>
+
+                      <div class="stepper-input-wrapper">
+                        <button type="button" class="btn-stepper" data-step-target="inputApneaDelay" data-step="-1">
+                          <i class="fa-solid fa-minus"></i>
+                        </button>
+                        <div class="input-with-unit">
+                          <input type="number" id="inputApneaDelay" class="form-control-stepper" value="10" min="5" max="30" step="1" required>
+                          <span class="input-unit">วินาที</span>
+                        </div>
+                        <button type="button" class="btn-stepper" data-step-target="inputApneaDelay" data-step="1">
+                          <i class="fa-solid fa-plus"></i>
+                        </button>
+                      </div>
+
+                      <div class="card-helper-text">
+                        <i class="fa-solid fa-stopwatch"></i>
+                        <span>มาตรฐาน OSA: เตือนเมื่อหยุดหายใจเกิน <strong>10 วิ</strong></span>
+                      </div>
+                    </div>
+
+                  </div>
+
+                  <!-- Target BP & IoT Device Pairing -->
+                  <div class="form-grid-2 mt-3">
+                    <div class="form-group">
+                      <label class="form-label" for="inputBaselineBp">
+                        <span>ความดันโลหิตเป้าหมาย (Target BP Baseline)</span>
+                        <span class="text-hint">mmHg</span>
+                      </label>
+                      <input type="text" id="inputBaselineBp" class="form-control" value="125/82">
+                    </div>
+
+                    <div class="form-group">
+                      <label class="form-label" for="selectAssignedDevice">
+                        <span>อุปกรณ์ IoT ประจำเตียง</span>
+                      </label>
+                      <select id="selectAssignedDevice" class="form-select">
+                        <option value="DEV-001" selected>Micro:bit Hub #01 (ECG Lead II)</option>
+                        <option value="DEV-002">Radar 60GHz #02 (Chest Motion Sensor)</option>
+                        <option value="DEV-003">Pulse Oximeter #03 (SpO2 BLE Module)</option>
+                        <option value="DEV-004">Environment Sensor #04 (Room Climate)</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Section 4: Clinical Notes -->
+                <div class="patient-section-card">
+                  <div class="patient-section-title">
+                    <i class="fa-solid fa-notes-medical text-purple"></i>
+                    <span>4. บันทึกข้อบ่งชี้ทางการแพทย์ & แผนการพยาบาล (Clinical Notes & Nursing Remarks)</span>
+                  </div>
+
+                  <div class="form-group">
+                    <textarea id="inputClinicalNotes" class="form-control" rows="3"
+                      placeholder="ระบุคำสั่งแพทย์หรือข้อควรระวัง เช่น: ตรวจพบภาวะกรนรุนแรงร่วมกับสะดุ้งตื่น ห้ามนอนหงายราบ ให้ปรับหัวเตียงสูง 30 องศา และตั้งเกณฑ์เสียงเตือนระดับ ICU"></textarea>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Dialog Footer Action Buttons -->
+              <div class="dialog-actions-footer">
+                <div class="left-actions">
+                  <button type="button" class="btn btn-danger-soft" id="btnDeletePatient" style="display: none;">
+                    <i class="fa-solid fa-trash-can"></i> ลบประวัติผู้ป่วยนี้
+                  </button>
+                </div>
+
+                <div class="right-actions">
+                  <button type="button" class="btn btn-outline" id="btnCancelPatientEdit">
+                    <i class="fa-solid fa-xmark"></i> ปิดหน้าต่าง
+                  </button>
+                  <button type="button" class="btn btn-success" id="btnSetActivePatient">
+                    <i class="fa-solid fa-circle-play"></i> เลือกเป็นผู้ป่วยมอนิเตอร์สด
+                  </button>
+                  <button type="button" class="btn btn-primary btn-save" id="btnSavePatient">
+                    <i class="fa-solid fa-floppy-disk"></i> <span>บันทึกข้อมูลประวัติ & เกณฑ์สัญญาณชีพ</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </dialog>
+
+          <!-- Saved Patients Directory / Management Cards & Table -->
+          <div class="saved-patients-directory-card">
+            <div class="directory-header">
+              <div class="directory-title">
+                <i class="fa-solid fa-users-gear text-primary"></i>
+                <div>
+                  <div class="title-with-badge">
+                    <h4>รายชื่อประวัติผู้ป่วยที่ลงทะเบียนในระบบ (Registered Patients)</h4>
+                    <span class="badge-counter" id="patientCounterBadge">4 ราย</span>
+                  </div>
+                  <p>คลิกการ์ดผู้ป่วยเพื่อแก้ไขข้อมูล หรือกดปุ่มเพิ่มผู้ป่วยใหม่เพื่อเปิดหน้าต่างลงทะเบียน (Modal Dialog)</p>
+                </div>
+              </div>
+
+              <div class="directory-actions-right">
+                <div class="directory-search-box">
+                  <i class="fa-solid fa-magnifying-glass"></i>
+                  <input type="text" id="searchSettingsPatients" placeholder="ค้นหาชื่อ, HN, หอผู้ป่วย, เตียง...">
+                </div>
+                <button type="button" class="btn btn-primary" id="btnOpenAddPatientModal">
+                  <i class="fa-solid fa-user-plus"></i> + เพิ่มผู้ป่วยใหม่
+                </button>
+              </div>
+            </div>
+
+            <!-- Dynamic Patient Cards Grid -->
+            <div class="patient-cards-grid" id="patientCardsGrid">
+              <!-- Rendered via settings.js -->
+            </div>
+
+          </div>
+
+        </section>
+
+        <!-- ==========================================
+                 TAB 2: AUDIO & BUZZER SETTINGS
+            =========================================== -->
+        <section class="settings-panel" id="tabAudio" role="tabpanel">
+
+          <div class="panel-hero">
+            <div class="hero-text">
+              <div class="badge-pill badge-primary-soft">
+                <i class="fa-solid fa-volume-high"></i> Acoustic Alarm System
+              </div>
+              <h2>ระบบเสียง Buzzer และการกระจายสัญญาณแจ้งเตือน (Audio & Alert Dispatch)</h2>
+              <p>กำหนดระดับความดังเสียงสังเคราะห์ตามมาตรฐาน ISO 60601-1-8 และตั้งค่าช่องทางแจ้งเตือนด่วนไปยังสมาร์ตโฟน
+              </p>
+            </div>
+          </div>
+
+          <!-- Master Buzzer Card -->
+          <div class="feature-toggle-card">
+            <div class="toggle-card-main">
+              <div class="toggle-icon-box bg-blue-soft">
+                <i class="fa-solid fa-bell text-primary"></i>
+              </div>
+              <div class="toggle-details">
+                <div class="toggle-title-row">
+                  <h4>เปิดใช้งานเสียง Buzzer เตือนฉุกเฉิน (Master Buzzer)</h4>
+                  <span class="status-tag tag-active" id="buzzerStatusTag">เปิดใช้งาน</span>
+                </div>
+                <p>ส่งเสียง Beep ทางการแพทย์ผ่านลำโพงของเครื่องมอนิเตอร์และอุปกรณ์ Micro:bit เมื่อตรวจพบสัญญาณชีพวิกฤต
+                </p>
+              </div>
+            </div>
+
+            <label class="switch-control" for="toggleBuzzer">
+              <input type="checkbox" id="toggleBuzzer" checked>
+              <span class="switch-track"></span>
+            </label>
+          </div>
+
+          <!-- Volume Control & Waveform Visualizer -->
+          <div class="setting-card full-width">
+            <div class="volume-setting-header">
+              <div class="volume-title-box">
+                <div class="card-icon-avatar bg-primary-soft">
+                  <i class="fa-solid fa-sliders text-primary"></i>
+                </div>
+                <div>
+                  <h4>ระดับความดังเสียงสัญญาณ (Buzzer Volume)</h4>
+                  <p>ปรับระดับเดซิเบลของลำโพงให้เหมาะสมกับสภาพแวดล้อมห้องผู้ป่วย</p>
+                </div>
+              </div>
+
+              <div class="sound-wave-preview" id="soundWaveBox">
+                <span class="wave-bar"></span>
+                <span class="wave-bar"></span>
+                <span class="wave-bar"></span>
+                <span class="wave-bar"></span>
+                <span class="wave-bar"></span>
+              </div>
+            </div>
+
+            <div class="volume-slider-box">
+              <i class="fa-solid fa-volume-low text-muted"></i>
+              <div class="slider-wrapper">
+                <input type="range" class="custom-range-slider" id="sliderBuzzerVol" min="10" max="100" value="80"
+                  step="5">
+              </div>
+              <i class="fa-solid fa-volume-high text-primary"></i>
+              <span class="volume-badge-pill" id="badgeBuzzerVol">80%</span>
+            </div>
+
+            <!-- Volume Presets -->
+            <div class="volume-presets-row">
+              <button type="button" class="btn-vol-preset" data-vol="30">30% (เงียบสงบ)</button>
+              <button type="button" class="btn-vol-preset" data-vol="60">60% (มาตรฐาน)</button>
+              <button type="button" class="btn-vol-preset" data-vol="80">80% (ห้องผู้ป่วย)</button>
+              <button type="button" class="btn-vol-preset" data-vol="100">100% (สูงสุด ICU)</button>
+            </div>
+          </div>
+
+          <!-- Audio Tone & Interactive Test Suite -->
+          <div class="settings-grid">
+
+            <div class="setting-card">
+              <div class="setting-card-header">
+                <div class="card-icon-avatar bg-amber-soft">
+                  <i class="fa-solid fa-music text-amber"></i>
+                </div>
+                <div>
+                  <h4>รูปแบบความถี่เสียงเตือน (Alarm Tone Pattern)</h4>
+                  <p>ความถี่เสียงสังเคราะห์มาตรฐานสากล</p>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <select class="form-select" id="selectAlarmTone">
+                  <option value="medical_high">ความถี่สูง 950 Hz (High Priority Alarm - ISO 60601)</option>
+                  <option value="medical_std" selected>ความถี่มาตรฐาน 880 Hz (Standard Alert Tone)</option>
+                  <option value="medical_warn">ความถี่นุ่มนวล 650 Hz (Medium Warning Tone)</option>
+                </select>
+              </div>
+
+              <div class="test-buttons-row">
+                <button type="button" class="btn btn-outline btn-sm" id="btnTestBuzzer">
+                  <i class="fa-solid fa-play"></i> ทดสอบเสียงปกติ (880Hz)
+                </button>
+                <button type="button" class="btn btn-danger-soft btn-sm" id="btnTestCriticalAlarm">
+                  <i class="fa-solid fa-triangle-exclamation"></i> ทดสอบเสียงวิกฤต (950Hz)
+                </button>
+              </div>
+            </div>
+
+            <!-- Visual Strobe & High-Contrast Alert -->
+            <div class="setting-card">
+              <div class="setting-card-header">
+                <div class="card-icon-avatar bg-purple-soft">
+                  <i class="fa-solid fa-eye text-purple"></i>
+                </div>
+                <div>
+                  <h4>ระบบไฟกะพริบแจ้งเตือน (Visual Strobe Screen)</h4>
+                  <p>กะพริบขอบจอเมื่อเกิดเหตุฉุกเฉิน</p>
+                </div>
+              </div>
+
+              <div class="toggle-card-box compact">
+                <div class="toggle-text">
+                  <h5>กะพริบขอบจอสีแดงเตือนเหตุวิกฤต</h5>
+                  <p>ช่วยให้พยาบาลมองเห็นได้ชัดเจนแม้อยู่ห่างจากจอ</p>
+                </div>
+                <label class="switch-control">
+                  <input type="checkbox" id="toggleVisualAlarm" checked>
+                  <span class="switch-track"></span>
+                </label>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- LINE Notify & Webhook Broadcast Card -->
+          <div class="setting-card full-width">
+            <div class="setting-card-header">
+              <div class="card-icon-avatar bg-line-green-soft">
+                <i class="fa-brands fa-line text-line-green"></i>
+              </div>
+              <div class="header-with-action">
+                <div>
+                  <h4>การแจ้งเตือนผ่าน LINE Notify / Medical Webhook</h4>
+                  <p>ส่งข้อความแจ้งเตือนพร้อมสแนปช็อตสัญญาณชีพไปยังสมาร์ตโฟนของเวรพยาบาล</p>
+                </div>
+                <label class="switch-control" for="toggleLineNotify">
+                  <input type="checkbox" id="toggleLineNotify">
+                  <span class="switch-track"></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="line-config-body" id="lineConfigBody">
+              <div class="form-grid-2">
+                <div class="form-group">
+                  <label class="form-label" for="inputLineToken">
+                    <span>LINE Notify Token / Webhook Key</span>
+                    <a href="https://notify-bot.line.me/th/" target="_blank" class="link-external"><i
+                        class="fa-solid fa-arrow-up-right-from-square"></i> ขอ Token</a>
+                  </label>
+                  <div class="input-with-action">
+                    <input type="password" id="inputLineToken" class="form-control"
+                      placeholder="กรอก LINE Notify Token (เช่น xxxxxxxxxxxxx)" value="ey128989_demo_nurse_station_key">
+                    <button type="button" class="btn-icon-addon" id="btnToggleTokenVisibility" title="แสดง/ซ่อน Token">
+                      <i class="fa-solid fa-eye"></i>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="selectLineTarget">ผู้รับแจ้งเตือน</label>
+                  <div class="alert-preview-card">
+                    <div class="alert-preview-header">
+                      <i class="fa-brands fa-line" style="color: #06c755;"></i>
+                      <span>ตัวอย่างการแจ้งเตือนเมื่อเกิดเหตุวิกฤต (LINE Alert Preview)</span>
+                    </div>
+                    <div class="alert-preview-bubble">
+                      <div class="preview-title">🚨 [Sleep Guard] แจ้งเตือนฉุกเฉิน</div>
+                      <div class="preview-divider">━━━━━━━━━━━━━━━━━━━━</div>
+                      <div class="preview-body">
+                        <p>⚠️ <strong>ตรวจพบความผิดปกติของสัญญาณชีพ</strong></p>
+                        <p>👤 <strong>ผู้ป่วย/เตียง:</strong> เคสเฝ้าระวัง ICU (Bed No.04 - ICU Ward 4)</p>
+                        <p>⏰ <strong>เวลา:</strong> 02:43</p>
+                        <div class="preview-metrics">
+                          <div>• <strong>Heart Rate:</strong> สูงกว่าค่า Baseline</div>
+                          <div>• <strong>ECG Pattern:</strong> Pattern Deviation Detected</div>
+                          <div>• <strong>Sleep Risk Score:</strong> <span class="text-danger">82/100 (วิกฤต)</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="preview-divider">━━━━━━━━━━━━━━━━━━━━</div>
+                      <div class="preview-footer">📋 <em>กรุณาเข้าตรวจสอบอาการผู้ป่วย ณ เตียงทันที</em></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="line-actions-row">
+                <button type="button" class="btn btn-outline btn-sm" id="btnTestLineNotify">
+                  <i class="fa-brands fa-line text-line-green"></i> ส่งข้อความทดสอบเข้า LINE
+                </button>
+                <span class="text-hint"><i class="fa-solid fa-lock"></i>
+                  ข้อมูลโทเค็นถูกจัดเก็บอย่างปลอดภัยบนเครื่องของผู้ใช้</span>
+              </div>
+            </div>
+          </div>
+
+        </section>
+
+        <!-- ==========================================
+                 STICKY ACTION FOOTER BAR
+            =========================================== -->
+        <div class="settings-action-bar">
+
+          <div class="action-bar-left">
+            <span class="last-saved-text" id="lastSavedIndicator">
+              <i class="fa-regular fa-clock"></i> บันทึกล่าสุด: โหลดการตั้งค่าจากระบบแล้ว
+            </span>
+          </div>
+
+          <div class="action-bar-right">
+            <button type="button" class="btn btn-outline" id="btnResetDefaults">
+              <i class="fa-solid fa-rotate-left"></i> คืนค่ามาตรฐานแพทย์
+            </button>
+            <button type="submit" class="btn btn-primary btn-save" id="btnSubmitForm">
+              <i class="fa-solid fa-floppy-disk"></i>
+              <span>บันทึกการตั้งค่าทั้งหมด</span>
+            </button>
+          </div>
+        </div>
+
+        </form>
+      </div>
+    </main>
+  </div>
+
+
+  <!-- Modular Scripts -->
+  <script src="assets/js/settings.js"></script>
+</body>
+
+</html>
