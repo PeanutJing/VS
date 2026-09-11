@@ -10,43 +10,26 @@ import time
 import json
 import asyncio
 import argparse
-import os
-import math
 from contextlib import asynccontextmanager
 
 try:
     import serial
     import serial.tools.list_ports
-    from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-    from fastapi.staticfiles import StaticFiles
     from fastapi.middleware.cors import CORSMiddleware
     import uvicorn
 except ImportError:
-    print("[ERROR] Missing dependencies. Run: pip install fastapi uvicorn websockets pyserial")
     sys.exit(1)
-
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # ------------------------------------------------------------------------------
 # Global State & CLI Config
-# ------------------------------------------------------------------------------
-cli_config = {
+    print("[ERROR] Missing dependencies. Run: pip install fastapi uvicorn websockets")
+
     "port": None,
-    "baud": 115200,
-    "mock": False,
     "wifi_only": False,
     "http_port": 8080
 }
 
 current_telemetry = {
-    "ecg": None, "spo2": None, "hr": None, "resp": None, "sleepRisk": None,
-    "leadOff": False,
-    "hrDebug": "FAIL NO_DATA",
-    "temp": None, "roomTemp": None, "humidity": None,
-    "connected": False, "port": None, "baud": 115200,
-    "packetCount": 0, "lastUpdate": 0
-}
-
 discovered_modules = []
 serial_instance = None
 running = True
@@ -56,85 +39,13 @@ ecg_estimator = {
     "previous_above_threshold": False,
     "last_beat_time": None,
     "intervals": [],
-    "sample_times": [],
+# ------------------------------------------------------------------------------
     "last_debug": None
-}
-
-# ------------------------------------------------------------------------------
-# WebSocket Manager
-# ------------------------------------------------------------------------------
-class ConnectionManager:
-    def __init__(self):
-        self.active_connections = []
-
-    async def connect(self, websocket: WebSocket):
-        await websocket.accept()
-        self.active_connections.append(websocket)
-
-    def disconnect(self, websocket: WebSocket):
-        if websocket in self.active_connections:
-            self.active_connections.remove(websocket)
-
-    async def broadcast(self, message: dict):
-        if not self.active_connections:
-            return
-        msg = json.dumps(message)
-        tasks = []
-        for connection in list(self.active_connections):
-            tasks.append(asyncio.create_task(self._send(connection, msg)))
-        if tasks:
-            await asyncio.gather(*tasks, return_exceptions=True)
-
-    async def _send(self, connection, msg):
-        try:
-            await connection.send_text(msg)
-        except Exception:
-            self.disconnect(connection)
-
-manager = ConnectionManager()
-
-# ------------------------------------------------------------------------------
-# Helper Functions
-# ------------------------------------------------------------------------------
-def find_microbit_port():
-    ports = list(serial.tools.list_ports.comports())
-    for p in ports:
-        if p.vid == 0x0D28:
-            return p.device, p.description
-        desc = (p.description or "").lower()
-        if "micro:bit" in desc or "mbed" in desc or "daplink" in desc:
-            return p.device, p.description
-    return None, None
-
-def calculate_sleep_risk(hr, spo2, resp):
-    if hr is None or spo2 is None or resp is None:
-        return None
-    risk = 10
-    if spo2 < 85: risk += 55
-    elif spo2 < 90: risk += 40
-    elif spo2 < 95: risk += 20
-    if hr > 100 or hr < 50: risk += 25
-    if resp < 8: risk += 30
-    elif resp > 24: risk += 15
-    return min(100, max(0, risk))
-
-def send_serial_command(cmd_str):
-    global serial_instance
-    if not cmd_str.endswith("\n"):
-        cmd_str += "\n"
-    if serial_instance and serial_instance.is_open:
-        try:
-            serial_instance.write(cmd_str.encode("utf-8"))
-            return True
-        except Exception as e:
-            print(f"[ERROR] TX failed: {e}")
-    return False
-
-def update_hr_from_ecg(ecg_value):
-    """Estimate BPM from an ECG peak when the device does not send HR."""
-    try:
-        sample = float(ecg_value)
-    except (TypeError, ValueError):
+    "ecg": None,
+    "leadOff": False,
+    "hr": None,
+    "connected": True,
+    "port": "ESP8266 Wi-Fi",
         return
 
     estimator = ecg_estimator
